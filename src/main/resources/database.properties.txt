@@ -1,4 +1,4 @@
-# Configuration de la base de données
+# Configuration de la base de données MySQL
 db.url=jdbc:mysql://localhost:3306/gestion_bourse?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
 db.username=root
 db.password=
@@ -11,9 +11,14 @@ db.pool.connectionTimeout=30000
 db.pool.idleTimeout=600000
 db.pool.maxLifetime=1800000
 
-# Configuration email SMTP
+# Configuration Email (Gmail SMTP)
 email.smtp.host=smtp.gmail.com
 email.smtp.port=587
 email.username=votre.email@gmail.com
 email.password=votre_mot_de_passe_app
-email.from.name=Service des Bourses
+email.from.name=Service des Bourses Étudiantes
+
+# Note: Pour Gmail, utilisez un mot de passe d'application
+# 1. Activez la validation en 2 étapes sur votre compte Google
+# 2. Générez un mot de passe d'application
+# 3. Utilisez ce mot de passe ici au lieu de votre mot de passe habituel

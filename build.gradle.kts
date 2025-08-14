@@ -11,47 +11,53 @@ repositories {
 }
 
 dependencies {
-    // Base dependencies
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
-    testImplementation("org.junit.jupiter:junit-jupiter")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    // MySQL Driver
+    implementation ("mysql:mysql-connector-java:8.0.33")
 
-    // Database dependencies
-    implementation("mysql:mysql-connector-java:8.0.33")
-    implementation("com.zaxxer:HikariCP:5.0.1")
-
-    // PDF generation
-    implementation("com.itextpdf:itextpdf:5.5.13.3")
-
-    // Email functionality
-    implementation("javax.mail:mail:1.4.7")
-    implementation("com.sun.mail:javax.mail:1.6.2")
-
-    // Date handling
-    implementation("org.apache.commons:commons-lang3:3.12.0")
-
-    // Swing for GUI (optional, for desktop interface)
-    implementation("com.formdev:flatlaf:3.2.5")
+    // HikariCP pour la gestion des connexions
+    implementation ("com.zaxxer:HikariCP:5.0.1")
 
     // Logging
-    implementation("org.slf4j:slf4j-api:2.0.9")
-    implementation("ch.qos.logback:logback-classic:1.4.11")
+    implementation ("org.slf4j:slf4j-api:2.0.7")
+    implementation ("ch.qos.logback:logback-classic:1.4.8")
 
-    // JSON handling (for configuration)
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2")
+    // Email
+    implementation ("javax.mail:mail:1.5.0-b01")
+    implementation ("com.sun.mail:javax.mail:1.6.2")
+
+    // PDF Generation
+    implementation ("com.itextpdf:itextpdf:5.5.13.3")
+
+    // Testing
+    testImplementation ("junit:junit:4.13.2")
 }
 
 application {
-    mainClass.set("org.example.Main")
+    mainClass = "org.example.Main"
 }
 
-tasks.test {
-    useJUnitPlatform()
+compileJava {
+    options.encoding = "UTF-8"
 }
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+jar {
+    manifest {
+        attributes "Main-Class": ("org.example.Main")
     }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+
+// Tâche pour nettoyer et recompiler
+task cleanCompile {
+    dependsOn 'clean', 'compileJava'
+}
+
+// Configuration pour l'encoding UTF-8
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+Améliorer
+Expliquer
