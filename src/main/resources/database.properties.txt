@@ -1,0 +1,19 @@
+# Configuration de la base de données
+db.url=jdbc:mysql://localhost:3306/gestion_bourse?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+db.username=root
+db.password=
+db.driver=com.mysql.cj.jdbc.Driver
+
+# Configuration du pool de connexions HikariCP
+db.pool.maximumPoolSize=10
+db.pool.minimumIdle=2
+db.pool.connectionTimeout=30000
+db.pool.idleTimeout=600000
+db.pool.maxLifetime=1800000
+
+# Configuration email SMTP
+email.smtp.host=smtp.gmail.com
+email.smtp.port=587
+email.username=votre.email@gmail.com
+email.password=votre_mot_de_passe_app
+email.from.name=Service des Bourses
