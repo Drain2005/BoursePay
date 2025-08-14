@@ -1,5 +1,5 @@
 # Configuration de la base de données
-db.url=jdbc:mysql://localhost:3306/gestion_bourse?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+db.url=jdbc:mysql://localhost:3306/gestion_bourse?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
 db.username=root
 db.password=
 db.driver=com.mysql.cj.jdbc.Driver
