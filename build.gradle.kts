@@ -11,53 +11,38 @@ repositories {
 }
 
 dependencies {
-    // MySQL Driver
-    implementation ("mysql:mysql-connector-java:8.0.33")
+    implementation("mysql:mysql-connector-java:8.0.33")
+    implementation("com.zaxxer:HikariCP:5.0.1")
+    implementation("org.slf4j:slf4j-api:2.0.7")
+    implementation("ch.qos.logback:logback-classic:1.4.8")
+    implementation("com.sun.mail:javax.mail:1.6.2")
+    implementation("com.itextpdf:itextpdf:5.5.13.3")
 
-    // HikariCP pour la gestion des connexions
-    implementation ("com.zaxxer:HikariCP:5.0.1")
-
-    // Logging
-    implementation ("org.slf4j:slf4j-api:2.0.7")
-    implementation ("ch.qos.logback:logback-classic:1.4.8")
-
-    // Email
-    implementation ("javax.mail:mail:1.5.0-b01")
-    implementation ("com.sun.mail:javax.mail:1.6.2")
-
-    // PDF Generation
-    implementation ("com.itextpdf:itextpdf:5.5.13.3")
-
-    // Testing
-    testImplementation ("junit:junit:4.13.2")
+    testImplementation("junit:junit:4.13.2")
 }
 
 application {
-    mainClass = "org.example.Main"
+    // Classe principale trouvée dans src/main/java/org/example/Main.java
+    mainClass.set("org.example.Main")
 }
 
-compileJava {
+tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
     options.encoding = "UTF-8"
 }
 
-jar {
+tasks.named<Jar>("jar") {
     manifest {
-        attributes "Main-Class": ("org.example.Main")
+        attributes["Main-Class"] = "org.example.Main"
     }
-    from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-    }
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from({
+        configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }
+    })
+
+    duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
 }
 
-// Tâche pour nettoyer et recompiler
-task cleanCompile {
-    dependsOn 'clean', 'compileJava'
+tasks.register("cleanCompile") {
+    dependsOn(tasks.named("clean"))
+    dependsOn(tasks.named("compileJava"))
 }
-
-// Configuration pour l'encoding UTF-8
-tasks.withType(JavaCompile) {
-    options.encoding = 'UTF-8'
-}
-Améliorer
-Expliquer
