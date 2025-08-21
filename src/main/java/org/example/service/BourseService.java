@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.TextStyle;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -195,7 +196,6 @@ public class BourseService {
         }
     }
 
-
     /**
      * Génère un reçu de paiement PDF pour un étudiant
      */
@@ -225,16 +225,32 @@ public class BourseService {
 
     /**
      * Notifie par mail les retardataires concernant le délai
-     * Selon le sujet : "trois semaines après"
+     * Version originale - maintenue pour compatibilité
      */
     public boolean notifierRetardataires(YearMonth mois) {
+        return notifierRetardataires(mois, false);
+    }
+
+    /**
+     * Notifie par mail les retardataires avec option de forçage
+     * @param mois Le mois concerné
+     * @param forceEnvoi Si true, ignore la vérification du délai de 3 semaines
+     * @return true si au moins un email a été envoyé avec succès
+     */
+    public boolean notifierRetardataires(YearMonth mois, boolean forceEnvoi) {
         try {
             if (mois == null) {
                 logger.error("Mois null pour notification");
                 return false;
             }
 
-            List<Etudiant> retardataires = payerDAO.findRetardataires(mois);
+            // Vérifier le délai de 3 semaines si forceEnvoi n'est pas activé
+            if (!forceEnvoi && estDelaiDepasse(mois)) {
+                logger.warn("Délai de 3 semaines dépassé pour {}, notifications non envoyées", mois);
+                return false;
+            }
+
+            List<Etudiant> retardataires = payerDAO.findRetardatairesSansDelai(mois);
 
             if (retardataires.isEmpty()) {
                 logger.info("Aucun retardataire trouvé pour {}", mois);
@@ -252,17 +268,19 @@ public class BourseService {
                 String message = String.format(
                         "Bonjour %s,\n\n" +
                                 "Nous vous informons que votre paiement de bourse pour le mois de %s %d " +
-                                "est en retard de plus de trois semaines.\n\n" +
-                                "INFORMATIONS :\n" +
-                                "- Matricule : %s\n" +
-                                "- Année universitaire : %s\n" +
-                                "- Institution : %s\n" +
-                                "- Niveau : %s\n\n" +
-                                "Veuillez régulariser votre situation IMMÉDIATEMENT auprès du service des bourses.\n" +
-                                "Tout retard supplémentaire pourrait entraîner la suspension de votre bourse.\n\n" +
-                                "Pour toute question, contactez-nous.\n\n" +
+                                "n'a pas encore été effectué.\n\n" +
+                                "INFORMATIONS DE VOTRE DOSSIER :\n" +
+                                "• Matricule : %s\n" +
+                                "• Année universitaire : %s\n" +
+                                "• Institution : %s\n" +
+                                "• Niveau : %s\n\n" +
+                                "⚠️ ATTENTION : Veuillez régulariser votre situation IMMÉDIATEMENT.\n" +
+                                "Tout retard supplémentaire pourrait entraîner des conséquences sur votre bourse.\n\n" +
+                                "📞 Pour toute question, contactez-nous.\n\n" +
                                 "Cordialement,\n" +
-                                "Service de Gestion des Bourses Étudiantes",
+                                "Service de Gestion des Bourses Étudiantes\n\n" +
+                                "---\n" +
+                                "Ceci est un message automatique. Ne pas répondre directement à cet email.",
 
                         etudiant.getNom(),
                         nomMois, annee,
@@ -287,6 +305,113 @@ public class BourseService {
             logger.error("Erreur lors de l'envoi des notifications", e);
             return false;
         }
+    }
+
+    /**
+     * Envoie un email individuel à un étudiant
+     * @param destinataire L'adresse email du destinataire
+     * @param sujet Le sujet de l'email
+     * @param message Le contenu du message
+     * @return true si l'email a été envoyé avec succès
+     */
+    public boolean envoyerEmailIndividuel(String destinataire, String sujet, String message) {
+        if (destinataire == null || destinataire.trim().isEmpty()) {
+            logger.error("Adresse email destinataire vide ou null");
+            return false;
+        }
+
+        if (sujet == null || sujet.trim().isEmpty()) {
+            logger.error("Sujet de l'email vide ou null");
+            return false;
+        }
+
+        if (message == null || message.trim().isEmpty()) {
+            logger.error("Message de l'email vide ou null");
+            return false;
+        }
+
+        try {
+            boolean success = emailService.envoyerEmail(destinataire, sujet, message);
+            if (success) {
+                logger.info("Email individuel envoyé avec succès à: {}", destinataire);
+            } else {
+                logger.warn("Échec de l'envoi de l'email individuel à: {}", destinataire);
+            }
+            return success;
+        } catch (Exception e) {
+            logger.error("Erreur lors de l'envoi de l'email individuel à: " + destinataire, e);
+            return false;
+        }
+    }
+
+    /**
+     * Vérifie si le délai de 3 semaines est dépassé pour un mois donné
+     * @param mois Le mois à vérifier
+     * @return true si le délai de 3 semaines après la fin du mois est dépassé
+     */
+    public boolean estDelaiDepasse(YearMonth mois) {
+        if (mois == null) {
+            logger.error("Mois null pour vérification délai");
+            return true;
+        }
+
+        LocalDateTime dateLimite = mois.atEndOfMonth().atTime(23, 59, 59).plusWeeks(3);
+        LocalDateTime maintenant = LocalDateTime.now();
+
+        boolean delaiDepasse = maintenant.isAfter(dateLimite);
+        logger.debug("Vérification délai pour {} : limite={}, maintenant={}, dépassé={}",
+                mois, dateLimite, maintenant, delaiDepasse);
+
+        return delaiDepasse;
+    }
+
+    /**
+     * Calcule le temps restant avant l'expiration du délai de 3 semaines
+     * @param mois Le mois concerné
+     * @return Une chaîne décrivant le temps restant ou "Délai dépassé"
+     */
+    public String getTempsRestantDelai(YearMonth mois) {
+        if (mois == null) {
+            return "Mois invalide";
+        }
+
+        LocalDateTime dateLimite = mois.atEndOfMonth().atTime(23, 59, 59).plusWeeks(3);
+        LocalDateTime maintenant = LocalDateTime.now();
+
+        if (maintenant.isAfter(dateLimite)) {
+            return "Délai dépassé";
+        }
+
+        long joursRestants = java.time.temporal.ChronoUnit.DAYS.between(
+                maintenant.toLocalDate(), dateLimite.toLocalDate());
+
+        if (joursRestants > 1) {
+            return joursRestants + " jours restants";
+        } else if (joursRestants == 1) {
+            return "1 jour restant";
+        } else {
+            long heuresRestantes = java.time.temporal.ChronoUnit.HOURS.between(maintenant, dateLimite);
+            if (heuresRestantes > 1) {
+                return heuresRestantes + " heures restantes";
+            } else if (heuresRestantes == 1) {
+                return "1 heure restante";
+            } else {
+                long minutesRestantes = java.time.temporal.ChronoUnit.MINUTES.between(maintenant, dateLimite);
+                return minutesRestantes + " minutes restantes";
+            }
+        }
+    }
+
+    /**
+     * Obtient la date limite pour les notifications d'un mois donné
+     * @param mois Le mois concerné
+     * @return La date limite (fin du mois + 3 semaines) ou null si mois invalide
+     */
+    public LocalDateTime getDateLimiteNotification(YearMonth mois) {
+        if (mois == null) {
+            return null;
+        }
+        return mois.atEndOfMonth().atTime(23, 59, 59).plusWeeks(3);
     }
 
     /**
@@ -334,5 +459,207 @@ public class BourseService {
             return false;
         }
         return payerDAO.hasPaymentForMonth(matricule, anneeUniv, mois);
+    }
+
+    /**
+     * Envoie une notification individuelle à un étudiant spécifique pour un mois donné
+     * @param etudiant L'étudiant à notifier
+     * @param mois Le mois concerné par la notification
+     * @return true si la notification a été envoyée avec succès
+     */
+    public boolean envoyerNotificationIndividuelle(Etudiant etudiant, YearMonth mois) {
+        if (etudiant == null) {
+            logger.error("Étudiant null pour notification individuelle");
+            return false;
+        }
+
+        if (mois == null) {
+            logger.error("Mois null pour notification individuelle");
+            return false;
+        }
+
+        // Vérifier si le délai est dépassé
+        if (estDelaiDepasse(mois)) {
+            logger.warn("Délai de 3 semaines dépassé pour {}, notification individuelle non envoyée à {}",
+                    mois, etudiant.getMatricule());
+            return false;
+        }
+
+        try {
+            String nomMois = mois.getMonth().getDisplayName(TextStyle.FULL, Locale.FRENCH);
+            int annee = mois.getYear();
+
+            // Vérifier si l'étudiant est retardataire
+            boolean estRetardataire = !etudiantAPayePourMois(etudiant.getMatricule(), etudiant.getAnneeUniv(), mois);
+
+            String sujet = String.format("RAPPEL %s - Paiement de bourse (%s %d)",
+                    estRetardataire ? "URGENT" : "INFORMATIF", nomMois, annee);
+
+            String message;
+            if (estRetardataire) {
+                // Message pour retardataire
+                message = String.format(
+                        "Bonjour %s,\n\n" +
+                                "Nous vous informons que votre paiement de bourse pour le mois de %s %d " +
+                                "n'a pas encore été effectué.\n\n" +
+                                "INFORMATIONS DE VOTRE DOSSIER :\n" +
+                                "• Matricule : %s\n" +
+                                "• Année universitaire : %s\n" +
+                                "• Institution : %s\n" +
+                                "• Niveau : %s\n" +
+                                "• Email : %s\n\n" +
+                                "🚨 ATTENTION : Veuillez régulariser votre situation RAPIDEMENT.\n" +
+                                "Délai restant : %s\n\n" +
+                                "📞 Pour toute question ou assistance, contactez immédiatement le service des bourses.\n" +
+                                "📧 Cette notification vous est envoyée personnellement suite à une vérification.\n\n" +
+                                "Cordialement,\n" +
+                                "Service de Gestion des Bourses Étudiantes\n\n" +
+                                "---\n" +
+                                "Ceci est un message automatique personnalisé. Pour toute question, contactez-nous.",
+
+                        etudiant.getNom(),
+                        nomMois, annee,
+                        etudiant.getMatricule(),
+                        etudiant.getAnneeUniv(),
+                        etudiant.getInstitution(),
+                        etudiant.getIdniv(),
+                        etudiant.getMail(),
+                        getTempsRestantDelai(mois)
+                );
+            } else {
+                // Message informatif pour étudiant à jour
+                message = String.format(
+                        "Bonjour %s,\n\n" +
+                                "Nous vous écrivons concernant votre bourse pour le mois de %s %d.\n\n" +
+                                "INFORMATIONS DE VOTRE DOSSIER :\n" +
+                                "• Matricule : %s\n" +
+                                "• Année universitaire : %s\n" +
+                                "• Institution : %s\n" +
+                                "• Niveau : %s\n" +
+                                "• Email : %s\n\n" +
+                                "✅ STATUT : Votre paiement pour ce mois est à jour.\n" +
+                                "📋 Cette notification vous est envoyée à titre informatif.\n\n" +
+                                "📞 Pour toute question, n'hésitez pas à nous contacter.\n\n" +
+                                "Cordialement,\n" +
+                                "Service de Gestion des Bourses Étudiantes\n\n" +
+                                "---\n" +
+                                "Ceci est un message automatique personnalisé.",
+
+                        etudiant.getNom(),
+                        nomMois, annee,
+                        etudiant.getMatricule(),
+                        etudiant.getAnneeUniv(),
+                        etudiant.getInstitution(),
+                        etudiant.getIdniv(),
+                        etudiant.getMail()
+                );
+            }
+
+            boolean success = emailService.envoyerEmail(etudiant.getMail(), sujet, message);
+
+            if (success) {
+                logger.info("Notification individuelle envoyée avec succès à {} ({}) pour {}",
+                        etudiant.getNom(), etudiant.getMail(), mois);
+            } else {
+                logger.warn("Échec de l'envoi de notification individuelle à {} ({}) pour {}",
+                        etudiant.getNom(), etudiant.getMail(), mois);
+            }
+
+            return success;
+
+        } catch (Exception e) {
+            logger.error("Erreur lors de l'envoi de notification individuelle à {} pour {}",
+                    etudiant.getMatricule(), mois, e);
+            return false;
+        }
+    }
+
+    /**
+     * Recherche d'étudiants par nom, matricule ou email
+     * @param terme Le terme de recherche
+     * @return Liste des étudiants correspondants
+     */
+    public List<Etudiant> rechercherEtudiantsAvance(String terme) {
+        if (terme == null || terme.trim().isEmpty()) {
+            return listerEtudiants();
+        }
+
+        terme = terme.trim().toLowerCase();
+        List<Etudiant> resultats = new ArrayList<>();
+        List<Etudiant> tousEtudiants = listerEtudiants();
+
+        for (Etudiant etudiant : tousEtudiants) {
+            boolean correspond = false;
+
+            // Recherche par nom
+            if (etudiant.getNom() != null && etudiant.getNom().toLowerCase().contains(terme)) {
+                correspond = true;
+            }
+
+            // Recherche par matricule
+            if (etudiant.getMatricule() != null && etudiant.getMatricule().toLowerCase().contains(terme)) {
+                correspond = true;
+            }
+
+            // Recherche par email
+            if (etudiant.getMail() != null && etudiant.getMail().toLowerCase().contains(terme)) {
+                correspond = true;
+            }
+
+            // Recherche par institution
+            if (etudiant.getInstitution() != null && etudiant.getInstitution().toLowerCase().contains(terme)) {
+                correspond = true;
+            }
+
+            if (correspond) {
+                resultats.add(etudiant);
+            }
+        }
+
+        logger.debug("Recherche '{}' : {} résultat(s) trouvé(s)", terme, resultats.size());
+        return resultats;
+    }
+
+    /**
+     * Obtient des statistiques sur les retardataires
+     * @param mois Le mois à analyser
+     * @return Un objet contenant les statistiques
+     */
+    public StatistiquesRetardataires getStatistiquesRetardataires(YearMonth mois) {
+        if (mois == null) {
+            return new StatistiquesRetardataires(0, 0, true, "Mois invalide");
+        }
+
+        List<Etudiant> retardataires = payerDAO.findRetardatairesSansDelai(mois);
+        int totalEtudiants = listerEtudiants().size();
+        boolean delaiDepasse = estDelaiDepasse(mois);
+        String tempsRestant = getTempsRestantDelai(mois);
+
+        return new StatistiquesRetardataires(retardataires.size(), totalEtudiants, delaiDepasse, tempsRestant);
+    }
+
+    /**
+     * Classe interne pour les statistiques des retardataires
+     */
+    public static class StatistiquesRetardataires {
+        private final int nombreRetardataires;
+        private final int totalEtudiants;
+        private final boolean delaiDepasse;
+        private final String tempsRestant;
+
+        public StatistiquesRetardataires(int nombreRetardataires, int totalEtudiants, boolean delaiDepasse, String tempsRestant) {
+            this.nombreRetardataires = nombreRetardataires;
+            this.totalEtudiants = totalEtudiants;
+            this.delaiDepasse = delaiDepasse;
+            this.tempsRestant = tempsRestant;
+        }
+
+        public int getNombreRetardataires() { return nombreRetardataires; }
+        public int getTotalEtudiants() { return totalEtudiants; }
+        public boolean isDelaiDepasse() { return delaiDepasse; }
+        public String getTempsRestant() { return tempsRestant; }
+        public double getPourcentageRetardataires() {
+            return totalEtudiants > 0 ? (nombreRetardataires * 100.0 / totalEtudiants) : 0;
+        }
     }
 }
