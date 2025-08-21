@@ -578,7 +578,8 @@ public class RapportPanel extends JPanel {
                         publish("Envoi à " + etudiant.getNom() + " (" + (i + 1) + "/" + retardataires.size() + ")");
 
                         // Simuler l'envoi (remplacer par l'appel réel au service)
-                        boolean envoyeAvecSucces = envoyerNotificationIndividuelle(etudiant, mois);
+
+                        boolean envoyeAvecSucces = bourseService.envoyerNotificationIndividuelle(etudiant, mois);
 
                         if (envoyeAvecSucces) {
                             envoyesAvecSucces++;
@@ -818,7 +819,8 @@ public class RapportPanel extends JPanel {
             }
 
             dialog.dispose();
-            envoyerNotificationIndividuelle(selectedItem.getEtudiant(), moisAnnee);
+            envoyerNotificationIndividuelleUI(selectedItem.getEtudiant(), moisAnnee);
+
         });
 
         annulerButton.addActionListener(e -> dialog.dispose());
@@ -841,7 +843,7 @@ public class RapportPanel extends JPanel {
         dialog.setVisible(true);
     }
 
-    private void envoyerNotificationIndividuelle(Etudiant etudiant, YearMonth mois) {
+    private void envoyerNotificationIndividuelleUI(Etudiant etudiant, YearMonth mois) {
         // Vérifier si l'étudiant est vraiment retardataire pour ce mois
         boolean estRetardataire = !bourseService.etudiantAPayePourMois(
                 etudiant.getMatricule(), etudiant.getAnneeUniv(), mois);
@@ -953,47 +955,8 @@ public class RapportPanel extends JPanel {
      * Méthode helper pour envoyer une notification individuelle
      * MAINTENANT À L'INTÉRIEUR DE LA CLASSE
      */
-    private boolean envoyerNotificationIndividuelle(Etudiant etudiant, YearMonth mois) {
-        try {
-            String nomMois = mois.getMonth().getDisplayName(java.time.format.TextStyle.FULL, new java.util.Locale("fr"));
-            int annee = mois.getYear();
 
-            String sujet = String.format("RAPPEL URGENT - Paiement de bourse en retard (%s %d)", nomMois, annee);
 
-            String message = String.format(
-                    "Bonjour %s,\n\n" +
-                            "Nous vous informons que votre paiement de bourse pour le mois de %s %d " +
-                            "n'a pas encore été effectué.\n\n" +
-                            "INFORMATIONS DE VOTRE DOSSIER :\n" +
-                            "• Matricule : %s\n" +
-                            "• Année universitaire : %s\n" +
-                            "• Institution : %s\n" +
-                            "• Niveau : %s\n\n" +
-                            "⚠️ ATTENTION : Le délai de paiement expire bientôt !\n" +
-                            "Veuillez régulariser votre situation IMMÉDIATEMENT auprès du service des bourses.\n\n" +
-                            "📞 Pour toute question ou assistance, contactez-nous dès que possible.\n\n" +
-                            "Cordialement,\n" +
-                            "Service de Gestion des Bourses Étudiantes\n\n" +
-                            "---\n" +
-                            "Ceci est un message automatique. Ne pas répondre directement à cet email.",
-
-                    etudiant.getNom(),
-                    nomMois, annee,
-                    etudiant.getMatricule(),
-                    etudiant.getAnneeUniv(),
-                    etudiant.getInstitution(),
-                    etudiant.getIdniv()
-            );
-
-            // Appeler le service d'email (remplacer par votre implémentation)
-            // Ici on simule l'appel au service
-            return bourseService.envoyerEmailIndividuel(etudiant.getMail(), sujet, message);
-
-        } catch (Exception e) {
-            System.err.println("Erreur lors de l'envoi à " + etudiant.getNom() + ": " + e.getMessage());
-            return false;
-        }
-    }
 
     /**
      * Classe pour représenter un étudiant dans la liste

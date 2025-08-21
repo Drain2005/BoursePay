@@ -99,11 +99,11 @@ public class ConfigUtil {
     }
 
     public static String getEmailUsername() {
-        return getProperty("email.username");
+        return getProperty("derainarakotoasimbol@gmail.com");
     }
 
     public static String getEmailPassword() {
-        return getProperty("email.password");
+        return getProperty("xsjg fjuz yhaq fliq");
     }
 
     public static String getEmailFromName() {
