@@ -1,33 +1,45 @@
 package org.example;
 
 import org.example.config.DatabaseConfig;
-import org.example.ui.ConsoleUI;
+import org.example.ui.MainFrame;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.swing.*;
 
 public class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
     public static void main(String[] args) {
-        logger.info("Démarrage de l'application de gestion de bourse");
+        // NE METTEZ PAS de UIManager.setLookAndFeel ici
+        // Laissez les couleurs par défaut de Swing
 
-        try {
-            // Vérifier la connexion à la base de données
-            DatabaseConfig.getConnection().close();
-            logger.info("Connexion à la base de données établie");
+        SwingUtilities.invokeLater(() -> {
+            try {
+                logger.info("Démarrage de l'application de gestion de bourse");
 
-            // Démarrer l'interface utilisateur
-            ConsoleUI ui = new ConsoleUI();
-            ui.demarrer();
+                // Testez la connexion à la base de données
+                DatabaseConfig.getConnection().close();
+                logger.info("Connexion à la base de données établie");
 
-        } catch (Exception e) {
-            logger.error("Erreur fatale lors du démarrage de l'application", e);
-            System.err.println("Impossible de démarrer l'application. Vérifiez la configuration de la base de données.");
-            System.err.println("Erreur: " + e.getMessage());
-        } finally {
-            // Fermer proprement la source de données
-            DatabaseConfig.closeDataSource();
-            logger.info("Application fermée");
-        }
+                // Créez et affichez la fenêtre principale
+                MainFrame mainFrame = new MainFrame();
+                mainFrame.setVisible(true);
+
+            } catch (Exception e) {
+                logger.error("Erreur fatale lors du démarrage de l'application", e);
+
+                // Message d'erreur plus détaillé
+                String errorMessage = "Impossible de démarrer l'application.\n\n";
+                errorMessage += "Vérifiez que:\n";
+                errorMessage += "1. MySQL est démarré\n";
+                errorMessage += "2. La base 'gestion_bourse' existe\n";
+                errorMessage += "3. Les identifiants dans database.properties sont corrects\n\n";
+                errorMessage += "Erreur technique: " + e.getMessage();
+
+                JOptionPane.showMessageDialog(null, errorMessage,
+                        "Erreur de démarrage", JOptionPane.ERROR_MESSAGE);
+            }
+        });
     }
 }

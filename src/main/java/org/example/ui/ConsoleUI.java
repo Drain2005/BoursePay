@@ -12,6 +12,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -760,7 +761,7 @@ public class ConsoleUI {
 
         try {
             YearMonth mois = YearMonth.parse(moisStr);
-            List<Etudiant> retardataires = bourseService.obtenirRetardataires(mois);
+            List<Etudiant> retardataires = bourseService.obtenirRetardataires(mois, false);
 
             if (retardataires.isEmpty()) {
                 System.out.println("✅ Aucun retardataire pour " + mois.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH)) + ".");
@@ -801,7 +802,7 @@ public class ConsoleUI {
             YearMonth mois = YearMonth.parse(moisStr);
 
             // Vérifier d'abord combien de retardataires
-            List<Etudiant> retardataires = bourseService.obtenirRetardataires(mois);
+            List<Etudiant> retardataires = bourseService.obtenirRetardataires(mois, false);
 
             if (retardataires.isEmpty()) {
                 System.out.println("✅ Aucun retardataire trouvé pour " + mois + ".");

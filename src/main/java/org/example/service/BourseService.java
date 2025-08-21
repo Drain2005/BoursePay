@@ -182,13 +182,19 @@ public class BourseService {
      * Liste des retardataires pour un mois donné
      * Un retardataire est un étudiant qui n'a pas payé sa bourse pour le mois spécifié
      */
-    public List<Etudiant> obtenirRetardataires(YearMonth mois) {
+    public List<Etudiant> obtenirRetardataires(YearMonth mois, boolean verifierDelai) {
         if (mois == null) {
             logger.error("Mois null pour recherche retardataires");
             return List.of();
         }
-        return payerDAO.findRetardataires(mois);
+
+        if (verifierDelai) {
+            return payerDAO.findRetardataires(mois); // Pour les notifications
+        } else {
+            return payerDAO.findRetardatairesSansDelai(mois); // Pour l'affichage
+        }
     }
+
 
     /**
      * Génère un reçu de paiement PDF pour un étudiant

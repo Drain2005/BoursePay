@@ -60,7 +60,7 @@ public class DatabaseConfig {
                 CREATE TABLE IF NOT EXISTS MONTANT (
                     idniv VARCHAR(50) PRIMARY KEY,
                     niveau VARCHAR(100) NOT NULL,
-                    montant INT NOT NULL
+                    montant INT NOT NULL CHECK (montant > 0)
                 )
             """);
 
@@ -70,10 +70,10 @@ public class DatabaseConfig {
                     matricule VARCHAR(50) NOT NULL,
                     annee_univ VARCHAR(20) NOT NULL,
                     nom VARCHAR(100) NOT NULL,
-                    sexe VARCHAR(10) NOT NULL,
+                    sexe VARCHAR(10) NOT NULL CHECK (sexe IN ('M', 'F', 'Masculin', 'Féminin')),
                     datenais DATE NOT NULL,
                     institution VARCHAR(100) NOT NULL,
-                    mail VARCHAR(100) NOT NULL,
+                    mail VARCHAR(100) NOT NULL UNIQUE,
                     idniv VARCHAR(50) NOT NULL,
                     PRIMARY KEY (matricule, annee_univ),
                     FOREIGN KEY (idniv) REFERENCES MONTANT(idniv) ON DELETE RESTRICT
@@ -87,7 +87,7 @@ public class DatabaseConfig {
                     matricule VARCHAR(50) NOT NULL,
                     annee_univ VARCHAR(20) NOT NULL,
                     date DATETIME NOT NULL,
-                    nbr_mois INT NOT NULL,
+                    nbr_mois INT NOT NULL CHECK (nbr_mois > 0),
                     FOREIGN KEY (matricule, annee_univ) REFERENCES ETUDIANT(matricule, annee_univ) ON DELETE CASCADE
                 )
             """);

@@ -19,6 +19,12 @@
       </assistant-state>
     </assistants>
   </component>
+  <component name="DBNavigator.Project.DatabaseBrowserManager">
+    <autoscroll-to-editor value="false" />
+    <autoscroll-from-editor value="true" />
+    <show-object-properties value="true" />
+    <loaded-nodes />
+  </component>
   <component name="DBNavigator.Project.DatabaseConsoleManager">
     <connection id="979f9d2f-0d30-4e33-861e-5eaa38951b41">
       <console name="scholarship" type="STANDARD" schema="scholarship" session="Main" />

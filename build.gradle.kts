@@ -18,31 +18,17 @@ dependencies {
     implementation("com.sun.mail:javax.mail:1.6.2")
     implementation("com.itextpdf:itextpdf:5.5.13.3")
 
+    // AJOUTEZ CES 2 LIGNES POUR FLATLAF
+    implementation("com.formdev:flatlaf:3.4.1")
+    implementation("com.formdev:flatlaf-extras:3.4.1")
+
     testImplementation("junit:junit:4.13.2")
 }
 
 application {
-    // Classe principale trouvée dans src/main/java/org/example/Main.java
     mainClass.set("org.example.Main")
 }
 
-tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
+tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
-}
-
-tasks.named<Jar>("jar") {
-    manifest {
-        attributes["Main-Class"] = "org.example.Main"
-    }
-
-    from({
-        configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }
-    })
-
-    duplicatesStrategy = org.gradle.api.file.DuplicatesStrategy.EXCLUDE
-}
-
-tasks.register("cleanCompile") {
-    dependsOn(tasks.named("clean"))
-    dependsOn(tasks.named("compileJava"))
 }
