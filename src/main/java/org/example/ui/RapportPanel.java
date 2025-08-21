@@ -950,6 +950,52 @@ public class RapportPanel extends JPanel {
     }
 
     /**
+     * Méthode helper pour envoyer une notification individuelle
+     * MAINTENANT À L'INTÉRIEUR DE LA CLASSE
+     */
+    private boolean envoyerNotificationIndividuelle(Etudiant etudiant, YearMonth mois) {
+        try {
+            String nomMois = mois.getMonth().getDisplayName(java.time.format.TextStyle.FULL, new java.util.Locale("fr"));
+            int annee = mois.getYear();
+
+            String sujet = String.format("RAPPEL URGENT - Paiement de bourse en retard (%s %d)", nomMois, annee);
+
+            String message = String.format(
+                    "Bonjour %s,\n\n" +
+                            "Nous vous informons que votre paiement de bourse pour le mois de %s %d " +
+                            "n'a pas encore été effectué.\n\n" +
+                            "INFORMATIONS DE VOTRE DOSSIER :\n" +
+                            "• Matricule : %s\n" +
+                            "• Année universitaire : %s\n" +
+                            "• Institution : %s\n" +
+                            "• Niveau : %s\n\n" +
+                            "⚠️ ATTENTION : Le délai de paiement expire bientôt !\n" +
+                            "Veuillez régulariser votre situation IMMÉDIATEMENT auprès du service des bourses.\n\n" +
+                            "📞 Pour toute question ou assistance, contactez-nous dès que possible.\n\n" +
+                            "Cordialement,\n" +
+                            "Service de Gestion des Bourses Étudiantes\n\n" +
+                            "---\n" +
+                            "Ceci est un message automatique. Ne pas répondre directement à cet email.",
+
+                    etudiant.getNom(),
+                    nomMois, annee,
+                    etudiant.getMatricule(),
+                    etudiant.getAnneeUniv(),
+                    etudiant.getInstitution(),
+                    etudiant.getIdniv()
+            );
+
+            // Appeler le service d'email (remplacer par votre implémentation)
+            // Ici on simule l'appel au service
+            return bourseService.envoyerEmailIndividuel(etudiant.getMail(), sujet, message);
+
+        } catch (Exception e) {
+            System.err.println("Erreur lors de l'envoi à " + etudiant.getNom() + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Classe pour représenter un étudiant dans la liste
      */
     private static class EtudiantListItem {
@@ -1004,177 +1050,131 @@ public class RapportPanel extends JPanel {
             return c;
         }
     }
-}
 
-/**
- * Méthode helper pour envoyer une notification individuelle
- */
-private boolean envoyerNotificationIndividuelle(Etudiant etudiant, YearMonth mois) {
-    try {
-        String nomMois = mois.getMonth().getDisplayName(java.time.format.TextStyle.FULL, new java.util.Locale("fr"));
-        int annee = mois.getYear();
+    private void showEtudiantsParNiveau() {
+        Map<String, List<Etudiant>> result = bourseService.listerEtudiantsParNiveauEtEtablissement();
 
-        String sujet = String.format("RAPPEL URGENT - Paiement de bourse en retard (%s %d)", nomMois, annee);
+        String[] columns = {"Groupe", "Nombre d'étudiants"};
+        tableModel = new DefaultTableModel(columns, 0);
 
-        String message = String.format(
-                "Bonjour %s,\n\n" +
-                        "Nous vous informons que votre paiement de bourse pour le mois de %s %d " +
-                        "n'a pas encore été effectué.\n\n" +
-                        "INFORMATIONS DE VOTRE DOSSIER :\n" +
-                        "• Matricule : %s\n" +
-                        "• Année universitaire : %s\n" +
-                        "• Institution : %s\n" +
-                        "• Niveau : %s\n\n" +
-                        "⚠️ ATTENTION : Le délai de paiement expire bientôt !\n" +
-                        "Veuillez régulariser votre situation IMMÉDIATEMENT auprès du service des bourses.\n\n" +
-                        "📞 Pour toute question ou assistance, contactez-nous dès que possible.\n\n" +
-                        "Cordialement,\n" +
-                        "Service de Gestion des Bourses Étudiantes\n\n" +
-                        "---\n" +
-                        "Ceci est un message automatique. Ne pas répondre directement à cet email.",
+        for (Map.Entry<String, List<Etudiant>> entry : result.entrySet()) {
+            tableModel.addRow(new Object[]{entry.getKey(), entry.getValue().size()});
+        }
 
-                etudiant.getNom(),
-                nomMois, annee,
-                etudiant.getMatricule(),
-                etudiant.getAnneeUniv(),
-                etudiant.getInstitution(),
-                etudiant.getIdniv()
-        );
-
-        // Appeler le service d'email (remplacer par votre implémentation)
-        // Ici on simule l'appel au service
-        return bourseService.envoyerEmailIndividuel(etudiant.getMail(), sujet, message);
-
-    } catch (Exception e) {
-        System.err.println("Erreur lors de l'envoi à " + etudiant.getNom() + ": " + e.getMessage());
-        return false;
-    }
-}
-
-private void showEtudiantsParNiveau() {
-    Map<String, List<Etudiant>> result = bourseService.listerEtudiantsParNiveauEtEtablissement();
-
-    String[] columns = {"Groupe", "Nombre d'étudiants"};
-    tableModel = new DefaultTableModel(columns, 0);
-
-    for (Map.Entry<String, List<Etudiant>> entry : result.entrySet()) {
-        tableModel.addRow(new Object[]{entry.getKey(), entry.getValue().size()});
-    }
-
-    setupTable();
-    showTable(); // Afficher la vue tableau
-    JOptionPane.showMessageDialog(this,
-            result.size() + " groupes trouvés",
-            "Résultats", JOptionPane.INFORMATION_MESSAGE);
-}
-
-private void showEtudiantsMineurs() {
-    List<Etudiant> mineurs = bourseService.listerEtudiantsMineurs();
-
-    String[] columns = {"Matricule", "Nom", "Âge", "Institution", "Niveau"};
-    tableModel = new DefaultTableModel(columns, 0);
-
-    for (Etudiant etudiant : mineurs) {
-        tableModel.addRow(new Object[]{
-                etudiant.getMatricule(),
-                etudiant.getNom(),
-                etudiant.getAge(),
-                etudiant.getInstitution(),
-                etudiant.getIdniv()
-        });
-    }
-
-    setupTable();
-    showTable(); // Afficher la vue tableau
-    JOptionPane.showMessageDialog(this,
-            mineurs.size() + " étudiant(s) mineur(s) trouvé(s)",
-            "Résultats", JOptionPane.INFORMATION_MESSAGE);
-}
-
-private void exporterRapport() {
-    if (tableModel == null || tableModel.getRowCount() == 0) {
+        setupTable();
+        showTable(); // Afficher la vue tableau
         JOptionPane.showMessageDialog(this,
-                "Aucune donnée à exporter. Veuillez d'abord générer un rapport.",
-                "Information", JOptionPane.WARNING_MESSAGE);
-        return;
+                result.size() + " groupes trouvés",
+                "Résultats", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    JFileChooser fileChooser = new JFileChooser();
-    fileChooser.setDialogTitle("Exporter le rapport");
-    fileChooser.setSelectedFile(new java.io.File("rapport_retardataires_" +
-            java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".csv"));
+    private void showEtudiantsMineurs() {
+        List<Etudiant> mineurs = bourseService.listerEtudiantsMineurs();
 
-    int userSelection = fileChooser.showSaveDialog(this);
+        String[] columns = {"Matricule", "Nom", "Âge", "Institution", "Niveau"};
+        tableModel = new DefaultTableModel(columns, 0);
 
-    if (userSelection == JFileChooser.APPROVE_OPTION) {
-        java.io.File fileToSave = fileChooser.getSelectedFile();
+        for (Etudiant etudiant : mineurs) {
+            tableModel.addRow(new Object[]{
+                    etudiant.getMatricule(),
+                    etudiant.getNom(),
+                    etudiant.getAge(),
+                    etudiant.getInstitution(),
+                    etudiant.getIdniv()
+            });
+        }
+
+        setupTable();
+        showTable(); // Afficher la vue tableau
         JOptionPane.showMessageDialog(this,
-                "Fonctionnalité d'exportation à implémenter complètement.\n" +
-                        "Fichier: " + fileToSave.getName(),
-                "Information", JOptionPane.INFORMATION_MESSAGE);
-    }
-}
-
-private void setupTable() {
-    table.setModel(tableModel);
-    table.setRowHeight(30);
-    table.setFont(new Font("Arial", Font.PLAIN, 12));
-
-    // Centrer toutes les cellules
-    DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-    centerRenderer.setHorizontalAlignment(JLabel.CENTER);
-
-    for (int i = 0; i < table.getColumnCount(); i++) {
-        table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+                mineurs.size() + " étudiant(s) mineur(s) trouvé(s)",
+                "Résultats", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    // Style de l'en-tête
-    JTableHeader header = table.getTableHeader();
-    header.setBackground(primaryColor);
-    header.setForeground(Color.WHITE);
-    header.setFont(new Font("Arial", Font.BOLD, 13));
+    private void exporterRapport() {
+        if (tableModel == null || tableModel.getRowCount() == 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Aucune donnée à exporter. Veuillez d'abord générer un rapport.",
+                    "Information", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-    DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer();
-    headerRenderer.setHorizontalAlignment(JLabel.CENTER);
-    headerRenderer.setBackground(primaryColor);
-    headerRenderer.setForeground(Color.WHITE);
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Exporter le rapport");
+        fileChooser.setSelectedFile(new java.io.File("rapport_retardataires_" +
+                java.time.LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + ".csv"));
 
-    for (int i = 0; i < table.getColumnModel().getColumnCount(); i++) {
-        table.getColumnModel().getColumn(i).setHeaderRenderer(headerRenderer);
+        int userSelection = fileChooser.showSaveDialog(this);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            java.io.File fileToSave = fileChooser.getSelectedFile();
+            JOptionPane.showMessageDialog(this,
+                    "Fonctionnalité d'exportation à implémenter complètement.\n" +
+                            "Fichier: " + fileToSave.getName(),
+                    "Information", JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 
-    // Ajuster la largeur des colonnes pour remplir l'espace
-    table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+    private void setupTable() {
+        table.setModel(tableModel);
+        table.setRowHeight(30);
+        table.setFont(new Font("Arial", Font.PLAIN, 12));
 
-    // Calculer la largeur totale disponible (environ 950px comme les autres panels)
-    int totalWidth = 950;
-    int[] columnWidths;
+        // Centrer toutes les cellules
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
 
-    switch (table.getColumnCount()) {
-        case 2: // Étudiants par niveau
-            columnWidths = new int[]{700, 250};
-            break;
-        case 5: // Étudiants mineurs
-            columnWidths = new int[]{100, 200, 80, 200, 100};
-            break;
-        case 7: // Retardataires
-            columnWidths = new int[]{100, 150, 100, 150, 80, 200, 120};
-            break;
-        default:
-            columnWidths = new int[table.getColumnCount()];
-            int defaultWidth = totalWidth / table.getColumnCount();
-            for (int i = 0; i < columnWidths.length; i++) {
-                columnWidths[i] = defaultWidth;
-            }
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(centerRenderer);
+        }
+
+        // Style de l'en-tête
+        JTableHeader header = table.getTableHeader();
+        header.setBackground(primaryColor);
+        header.setForeground(Color.WHITE);
+        header.setFont(new Font("Arial", Font.BOLD, 13));
+
+        DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer();
+        headerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        headerRenderer.setBackground(primaryColor);
+        headerRenderer.setForeground(Color.WHITE);
+
+        for (int i = 0; i < table.getColumnModel().getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setHeaderRenderer(headerRenderer);
+        }
+
+        // Ajuster la largeur des colonnes pour remplir l'espace
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+
+        // Calculer la largeur totale disponible (environ 950px comme les autres panels)
+        int totalWidth = 950;
+        int[] columnWidths;
+
+        switch (table.getColumnCount()) {
+            case 2: // Étudiants par niveau
+                columnWidths = new int[]{700, 250};
+                break;
+            case 5: // Étudiants mineurs
+                columnWidths = new int[]{100, 200, 80, 200, 100};
+                break;
+            case 7: // Retardataires
+                columnWidths = new int[]{100, 150, 100, 150, 80, 200, 120};
+                break;
+            default:
+                columnWidths = new int[table.getColumnCount()];
+                int defaultWidth = totalWidth / table.getColumnCount();
+                for (int i = 0; i < columnWidths.length; i++) {
+                    columnWidths[i] = defaultWidth;
+                }
+        }
+
+        // Appliquer les largeurs
+        for (int i = 0; i < table.getColumnCount() && i < columnWidths.length; i++) {
+            table.getColumnModel().getColumn(i).setPreferredWidth(columnWidths[i]);
+        }
+
+        // Forcer le redimensionnement
+        tableScrollPane.revalidate();
+        tableScrollPane.repaint();
     }
-
-    // Appliquer les largeurs
-    for (int i = 0; i < table.getColumnCount() && i < columnWidths.length; i++) {
-        table.getColumnModel().getColumn(i).setPreferredWidth(columnWidths[i]);
-    }
-
-    // Forcer le redimensionnement
-    tableScrollPane.revalidate();
-    tableScrollPane.repaint();
-}
 }
